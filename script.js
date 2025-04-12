@@ -206,6 +206,7 @@ function purchaseUpgrade(upgradeId) {
         upgrade.purchased += 1;
 
         // Increase cost for the next purchase (e.g., 15% increase)
+        const oldCost = upgrade.cost; // Store old cost for comparison if needed
         upgrade.cost = Math.floor(upgrade.baseCost * Math.pow(1.15, upgrade.purchased));
 
         // Recalculate BOTH multipliers after any purchase, as percentages affect totals
@@ -215,9 +216,33 @@ function purchaseUpgrade(upgradeId) {
         console.log(`Purchased ${upgrade.name}. New cost: ${upgrade.cost}. Level: ${upgrade.purchased}`);
         console.log(`New PPS: ${autoPointsPerSecond.toFixed(2)}, New Click Bonus: ${clickMultiplier.toFixed(2)}`); // Log new rates
 
-        updateDisplay();
-        renderStore(); // Re-render store to show new costs and levels
-        renderActiveUpgrades(); // Update the active upgrades display
+        // --- Update UI without full re-render ---
+        // Find the specific element in the store
+        const storeElement = upgradeStoreContainer.querySelector(`[data-upgrade-id="${upgrade.id}"]`);
+        if (storeElement) {
+            // Update the level display in the heading
+            const headingElement = storeElement.querySelector('h4');
+            if (headingElement) {
+                headingElement.textContent = `${upgrade.name} (Level ${upgrade.purchased})`;
+            }
+            // Update the cost display
+            const costElement = storeElement.querySelector('p.text-gray-800'); // Find the cost paragraph
+            if (costElement) {
+                costElement.textContent = `Cost: ${Math.floor(upgrade.cost).toLocaleString()}`;
+            }
+        } else {
+            console.warn('Could not find store element to update for ID:', upgrade.id);
+             // Fallback to re-rendering if specific element update fails?
+            renderStore(); 
+        }
+
+        // Update the middle panel (Active Upgrades)
+        renderActiveUpgrades(); 
+        // Update points, button states, and store visibility
+        updateDisplay(); 
+
+        // --- End UI Update --- 
+
     } else {
         console.log("Not enough points to buy", upgrade.name);
         // Optionally provide visual feedback (e.g., shake the button)
