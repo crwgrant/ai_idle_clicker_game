@@ -514,7 +514,11 @@ function formatNumberShort(number) {
     number = Math.floor(number);
 
     const suffixes = [
-        // Add more if needed (e.g., Sextillion, Septillion)
+        { value: 1e33, word: "Decillion" },
+        { value: 1e30, word: "Nonillion" },
+        { value: 1e27, word: "Octillion" },
+        { value: 1e24, word: "Septillion" },
+        { value: 1e21, word: "Sextillion" },
         { value: 1e18, word: "Quintillion" },
         { value: 1e15, word: "Quadrillion" },
         { value: 1e12, word: "Trillion" },
