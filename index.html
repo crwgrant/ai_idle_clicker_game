@@ -34,7 +34,9 @@
         <!-- Right Column - Purchasable Upgrades -->
         <div class="relative"> <!-- Outer container for positioning context -->
             <div class="absolute inset-0 pt-4 pr-4 pb-0.5 pl-4 flex flex-col"> <!-- Changed p-4 to pt-4 pr-4 pb-2 pl-4 -->
-                <h2 class="text-2xl font-bold mb-4 flex-shrink-0">Store</h2>
+                <h2 class="text-2xl font-bold mb-4 flex-shrink-0">Store 
+                    <span id="accumulated-points-display" class="text-sm font-normal text-gray-600">(Total Earned: 0)</span> <!-- Added span for accumulated points -->
+                </h2>
                 <div id="upgrade-store" class="space-y-2 overflow-y-auto flex-grow min-h-0"> <!-- Scrollable content -->
                     <!-- Upgrade store items will be dynamically inserted here -->
                 </div>

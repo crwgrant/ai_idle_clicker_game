@@ -4,6 +4,7 @@ let clickMultiplier = 0; // Starts at 0, base click adds 1 point. Upgrades add t
 let autoPointsPerSecond = 0;
 let prestigePoints = 0;
 let lastActiveTime = Date.now();
+let totalPointsAccumulated = 0; // New variable to track total earned points in this run
 const PRESTIGE_REQUIREMENT = 1000000;
 const PRESTIGE_BONUS_RATE = 0.01; // 1% bonus per prestige point
 
@@ -17,6 +18,7 @@ const prestigeButton = document.getElementById('prestige-btn');
 const saveButton = document.getElementById('save-btn');
 const saveStatusElement = document.getElementById('save-status'); // Added save status element reference
 const resetLink = document.getElementById('reset-link'); // Added reset link reference
+const accumulatedPointsDisplay = document.getElementById('accumulated-points-display'); // Added accumulated points display reference
 
 // Initial Upgrade Data (based on PRD, costs might need balancing later)
 // We'll make a deep copy later when loading/resetting to avoid mutation issues.
@@ -47,8 +49,15 @@ function updateDisplay() {
     // Update prestige display to show current bonus
     const prestigeBonusPercent = (prestigePoints * PRESTIGE_BONUS_RATE * 100).toFixed(1);
     prestigePointsDisplay.textContent = `Prestige Points: ${prestigePoints.toLocaleString()} (+${prestigeBonusPercent}% Bonus)`;
+    
+    // Update accumulated points display
+    if (accumulatedPointsDisplay) {
+        accumulatedPointsDisplay.textContent = `(Total Earned: ${Math.floor(totalPointsAccumulated).toLocaleString()})`;
+    }
+    
     updatePrestigeDisplay(); // Check if prestige button should be shown
     updateStoreAvailability(); // Grey out unaffordable upgrades
+    updateStoreVisibility(); // Add call to update visibility
 }
 
 // Function to update the prestige button visibility
@@ -60,7 +69,9 @@ function updatePrestigeDisplay() {
 // --- Clicking Mechanics ---
 clickButton.addEventListener('mousedown', () => {
     // Base points per click is 1, plus any multiplier from upgrades
-    points += 1 + clickMultiplier;
+    const pointsEarned = 1 + clickMultiplier;
+    points += pointsEarned;
+    totalPointsAccumulated += pointsEarned; // Increment accumulator
     updateDisplay();
     // Add a simple visual feedback by quickly scaling
     clickButton.classList.add('scale-90');
@@ -91,6 +102,7 @@ function applyIdleGains() {
     if (idleTime > 0) {
         const earnedPoints = idleTime * autoPointsPerSecond;
         points += earnedPoints;
+        totalPointsAccumulated += earnedPoints; // Increment accumulator
         console.log(`Applied ${earnedPoints.toLocaleString()} points from ${idleTime.toFixed(1)} seconds of idle time.`);
         // No need to update lastActiveTime here, the game loop will handle it.
         updateDisplay(); // Update display after applying gains
@@ -108,7 +120,9 @@ function gameLoop() {
     const deltaTime = (now - lastTickTime) / 1000; // Time difference in seconds
 
     // Add points based on auto-generation rate and time elapsed
-    points += autoPointsPerSecond * deltaTime;
+    const earnedPoints = autoPointsPerSecond * deltaTime;
+    points += earnedPoints;
+    totalPointsAccumulated += earnedPoints; // Increment accumulator
 
     lastTickTime = now;
     updateDisplay();
@@ -127,6 +141,7 @@ function renderStore() {
     upgradeStoreContainer.innerHTML = ''; // Clear existing store items
     upgrades.forEach(upgrade => {
         const upgradeElement = document.createElement('div');
+        upgradeElement.dataset.upgradeId = upgrade.id;
         upgradeElement.className = 'border p-3 rounded bg-white shadow-sm flex justify-between items-center';
         upgradeElement.innerHTML = `
             <div>
@@ -157,6 +172,26 @@ function updateStoreAvailability() {
     });
 }
 
+// **NEW FUNCTION**
+// Function to update the visibility of upgrades in the store based on progress
+function updateStoreVisibility() {
+    const revealThreshold = 0.75; // Show upgrade when points reach 75% of its cost
+
+    upgrades.forEach(upgrade => {
+        const element = upgradeStoreContainer.querySelector(`[data-upgrade-id="${upgrade.id}"]`);
+        if (!element) return; // Skip if element not found
+
+        // Always show first two upgrades (IDs 1 and 2)
+        if (upgrade.id <= 2) {
+            element.classList.remove('hidden');
+            return;
+        }
+
+        // For upgrades 3+, check if TOTAL ACCUMULATED points meet the threshold
+        const isVisible = totalPointsAccumulated >= (upgrade.cost * revealThreshold);
+        element.classList.toggle('hidden', !isVisible);
+    });
+}
 
 // Function to handle purchasing an upgrade
 function purchaseUpgrade(upgradeId) {
@@ -282,6 +317,7 @@ function renderActiveUpgrades() {
 // Initial setup calls
 renderStore();
 renderActiveUpgrades();
+updateStoreVisibility(); // Initial visibility check
 
 // --- Persistence System (LocalStorage) ---
 
@@ -294,7 +330,8 @@ function saveGame(isAutoSave = false) { // Add parameter to distinguish auto/man
         autoPointsPerSecond: autoPointsPerSecond,
         prestigePoints: prestigePoints,
         upgrades: upgrades, // Save the current state of upgrades (costs, purchased levels)
-        lastActiveTime: Date.now() // Save the timestamp for idle calculation
+        lastActiveTime: Date.now(), // Save the timestamp for idle calculation
+        totalPointsAccumulated: totalPointsAccumulated // Save the accumulated points
     };
     try {
         localStorage.setItem('idleClickerSave', JSON.stringify(gameState));
@@ -342,6 +379,7 @@ function loadGame() {
             points = gameState.points || 0;
             prestigePoints = gameState.prestigePoints || 0;
             lastActiveTime = gameState.lastActiveTime || Date.now(); // Important for idle calculation
+            totalPointsAccumulated = gameState.totalPointsAccumulated || 0; // Load accumulated points
 
             // Restore upgrades - carefully merge in case new upgrades were added in code
             const loadedUpgrades = gameState.upgrades || [];
@@ -369,6 +407,7 @@ function loadGame() {
             // Initialize everything fresh if no save exists (already done by initial variable setup)
             // Make sure lastActiveTime is current if no save
             lastActiveTime = Date.now();
+            totalPointsAccumulated = 0; // Ensure accumulator is 0 on fresh start
         }
     } catch (error) {
         console.error("Failed to load game:", error);
@@ -408,6 +447,7 @@ function performPrestige() {
 
     // Reset core game state
     points = 0;
+    totalPointsAccumulated = 0; // Reset accumulator on prestige
     clickMultiplier = 0; // Reset base multipliers
     autoPointsPerSecond = 0;
     lastActiveTime = Date.now(); // Reset timer
@@ -415,12 +455,9 @@ function performPrestige() {
     // Reset upgrades to their initial state (costs, purchased levels)
     upgrades = JSON.parse(JSON.stringify(initialUpgrades));
 
-    // Apply prestige bonus (example: 1% bonus per prestige point to PPS and clicks)
-    // We might need to adjust how multipliers are calculated if prestige bonus applies
-    // For now, we just store prestige points. Calculation logic needs refinement.
-    // A potential way: add a global prestigeMultiplier derived from prestigePoints
-    // Example: let globalBonusMultiplier = 1 + (prestigePoints * 0.01);
-    // Then multiply autoPointsPerSecond and clickMultiplier by this bonus.
+    // Recalculate multipliers to apply new prestige bonus
+    autoPointsPerSecond = calculateTotalAutoPPS();
+    clickMultiplier = calculateTotalClickMultiplier();
 
     // Update UI
     updateDisplay();
@@ -442,10 +479,15 @@ function resetGame() {
     console.warn("Resetting game state to defaults.");
     points = 0;
     prestigePoints = 0;
+    totalPointsAccumulated = 0; // Reset accumulator on reset
     clickMultiplier = 0;
     autoPointsPerSecond = 0;
     lastActiveTime = Date.now();
     upgrades = JSON.parse(JSON.stringify(initialUpgrades));
+
+    // Recalculate multipliers (will be 0)
+    autoPointsPerSecond = calculateTotalAutoPPS();
+    clickMultiplier = calculateTotalClickMultiplier();
 
     // Update UI
     updateDisplay();
