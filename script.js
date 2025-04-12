@@ -14,6 +14,7 @@ const upgradeStoreContainer = document.getElementById('upgrade-store');
 const activeUpgradesContainer = document.getElementById('active-upgrades');
 const prestigeButton = document.getElementById('prestige-btn');
 const saveButton = document.getElementById('save-btn');
+const saveStatusElement = document.getElementById('save-status'); // Added save status element reference
 
 // Initial Upgrade Data (based on PRD, costs might need balancing later)
 // We'll make a deep copy later when loading/resetting to avoid mutation issues.
@@ -228,7 +229,9 @@ renderActiveUpgrades();
 
 // --- Persistence System (LocalStorage) ---
 
-function saveGame() {
+let saveStatusTimeoutId = null; // Variable to hold the timeout ID
+
+function saveGame(isAutoSave = false) { // Add parameter to distinguish auto/manual save
     const gameState = {
         points: points,
         clickMultiplier: clickMultiplier,
@@ -239,11 +242,37 @@ function saveGame() {
     };
     try {
         localStorage.setItem('idleClickerSave', JSON.stringify(gameState));
-        console.log("Game Saved");
-        // Optional: Provide user feedback (e.g., a small temporary message)
+        // console.log("Game Saved"); // Keep console log for debugging if needed
+
+        // Display feedback in the UI
+        if (saveStatusElement) {
+            const message = isAutoSave ? "Game auto-saved" : "Game Saved!";
+            saveStatusElement.textContent = message;
+
+            // Clear any existing timeout to prevent message flickering
+            if (saveStatusTimeoutId) {
+                clearTimeout(saveStatusTimeoutId);
+            }
+
+            // Set a new timeout to clear the message after 2.5 seconds
+            saveStatusTimeoutId = setTimeout(() => {
+                if (saveStatusElement) {
+                    saveStatusElement.textContent = '\u00A0'; // Use non-breaking space to maintain height
+                }
+                saveStatusTimeoutId = null;
+            }, 2500);
+        }
     } catch (error) {
         console.error("Failed to save game:", error);
-        // Handle potential storage errors (e.g., quota exceeded)
+        if (saveStatusElement) {
+            saveStatusElement.textContent = "Save Failed!";
+             // Optionally clear this error message too after a while
+             if (saveStatusTimeoutId) clearTimeout(saveStatusTimeoutId);
+             saveStatusTimeoutId = setTimeout(() => {
+                 if (saveStatusElement) saveStatusElement.textContent = '\u00A0';
+                 saveStatusTimeoutId = null;
+             }, 3500);
+        }
     }
 }
 
@@ -293,11 +322,11 @@ function loadGame() {
     }
 }
 
-// Add event listeners for Save/Load buttons
-saveButton.addEventListener('click', saveGame);
+// Add event listeners for Save button (pass false for isAutoSave)
+saveButton.addEventListener('click', () => saveGame(false));
 
-// Auto-save every 30 seconds (as per PRD)
-setInterval(saveGame, 300000); // Changed interval to 5 minutes (300,000 ms)
+// Auto-save interval (pass true for isAutoSave)
+setInterval(() => saveGame(true), 300000); // Changed interval to 5 minutes (300,000 ms)
 
 // Initial load attempt when the script runs
 window.addEventListener('load', loadGame);
