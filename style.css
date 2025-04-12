@@ -1,3 +1,7 @@
 @tailwind base;
 @tailwind components;
-@tailwind utilities; 
+@tailwind utilities;
+
+body {
+    overflow: hidden; /* Prevent the whole page from scrolling */
+} 
