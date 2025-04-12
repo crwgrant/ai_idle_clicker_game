@@ -174,17 +174,28 @@ function renderStore() {
                 <p class="text-sm text-gray-600">${upgrade.description}</p>
                 <p class="cost-display text-sm text-gray-800 font-medium">${costLabel}: ${formattedCost.value}${formattedCost.suffixWord ? ' ' + formattedCost.suffixWord : ''}</p>
             </div>
-            <button data-id="${upgrade.id}" class="buy-upgrade-btn bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                Buy
-            </button>
+            <div class="flex flex-col space-y-1"> <!-- Wrapper for buttons - CHANGED to vertical stack -->
+                <button data-id="${upgrade.id}" class="buy-upgrade-btn bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                    Buy
+                </button>
+                <button data-id="${upgrade.id}" class="sell-upgrade-btn bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        ${upgrade.purchased === 0 ? 'disabled' : ''}> <!-- Disable Sell if level 0 -->
+                    Sell
+                </button>
+            </div>
         `;
         upgradeStoreContainer.appendChild(upgradeElement);
     });
 
-    // Add event listeners to the new buttons
+    // Add event listeners to the new BUY buttons
     document.querySelectorAll('.buy-upgrade-btn').forEach(button => {
         button.addEventListener('click', () => purchaseUpgrade(parseInt(button.dataset.id)));
     });
+    // Add event listeners to the new SELL buttons
+    document.querySelectorAll('.sell-upgrade-btn').forEach(button => {
+        button.addEventListener('click', () => sellUpgrade(parseInt(button.dataset.id)));
+    });
+
     updateStoreAvailability(); // Ensure availability is set correctly after rendering
 }
 
@@ -222,6 +233,67 @@ function updateStoreVisibility() {
         const isVisible = totalPointsAccumulated >= (upgrade.cost * revealThreshold);
         element.classList.toggle('hidden', !isVisible);
     });
+}
+
+// Function to handle selling an upgrade (one level at a time)
+function sellUpgrade(upgradeId) {
+    const upgrade = upgrades.find(u => u.id === upgradeId);
+    if (!upgrade) {
+        console.error("Upgrade not found for selling:", upgradeId);
+        return;
+    }
+
+    if (upgrade.purchased > 0) {
+        // Calculate the cost of the level we are about to sell
+        // This is the cost paid for the *current* level (which is based on the *previous* level)
+        const costOfSoldLevel = Math.floor(upgrade.baseCost * Math.pow(1.15, upgrade.purchased - 1));
+        const refundAmount = Math.floor(costOfSoldLevel * 0.50); // 50% refund
+
+        // Update state
+        upgrade.purchased -= 1;
+        points += refundAmount;
+        // Recalculate the cost for the now current 'next purchase' level
+        upgrade.cost = Math.floor(upgrade.baseCost * Math.pow(1.15, upgrade.purchased)); 
+
+        // Recalculate overall multipliers
+        autoPointsPerSecond = calculateTotalAutoPPS();
+        clickMultiplier = calculateTotalClickMultiplier();
+
+        console.log(`Sold 1 level of ${upgrade.name}. New Level: ${upgrade.purchased}. Refunded: ${formatNumberShort(refundAmount).value}. New Cost: ${formatNumberShort(upgrade.cost).value}.`);
+        console.log(`New PPS: ${autoPointsPerSecond.toFixed(2)}, New Click Bonus: ${clickMultiplier.toFixed(2)}`);
+
+        // --- Update UI for the specific item ---
+        const storeElement = upgradeStoreContainer.querySelector(`[data-upgrade-id="${upgrade.id}"]`);
+        if (storeElement) {
+            // Update level
+            const headingElement = storeElement.querySelector('h4');
+            if (headingElement) {
+                headingElement.textContent = `${upgrade.name} (Level ${upgrade.purchased})`;
+            }
+            // Update cost (considering bulk buy for display)
+            const costElement = storeElement.querySelector('p.cost-display');
+            if (costElement) {
+                const costLabel = bulkBuyAmount > 1 ? `Cost (x${bulkBuyAmount})` : "Cost";
+                const displayCost = bulkBuyAmount > 1 ? calculateBulkCost(upgrade.id, bulkBuyAmount) : upgrade.cost;
+                const formattedCost = formatNumberShort(displayCost);
+                costElement.textContent = `${costLabel}: ${formattedCost.value}${formattedCost.suffixWord ? ' ' + formattedCost.suffixWord : ''}`;
+            }
+             // Update Sell button state
+            const sellButton = storeElement.querySelector('.sell-upgrade-btn');
+            if (sellButton) {
+                sellButton.disabled = upgrade.purchased === 0;
+            }
+        } else {
+            console.warn('Could not find store element to update after selling ID:', upgrade.id);
+            renderStore(); // Fallback
+        }
+
+        renderActiveUpgrades();
+        updateDisplay(); // Updates points, store availability, visibility etc.
+
+    } else {
+        console.log("Cannot sell base level of", upgrade.name);
+    }
 }
 
 // Function to handle purchasing an upgrade
