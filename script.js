@@ -19,6 +19,8 @@ const saveButton = document.getElementById('save-btn');
 const saveStatusElement = document.getElementById('save-status'); // Added save status element reference
 const resetLink = document.getElementById('reset-link'); // Added reset link reference
 const accumulatedPointsDisplay = document.getElementById('accumulated-points-display'); // Added accumulated points display reference
+const pointsSuffixDisplay = document.getElementById('points-suffix'); // New suffix element
+const accumulatedPointsSuffixDisplay = document.getElementById('accumulated-points-suffix'); // New suffix element
 
 // Initial Upgrade Data (based on PRD, costs might need balancing later)
 // We'll make a deep copy later when loading/resetting to avoid mutation issues.
@@ -44,15 +46,19 @@ let upgrades = JSON.parse(JSON.stringify(initialUpgrades));
 
 // Function to update the points display
 function updateDisplay() {
-    // Use Intl.NumberFormat for better readability of large numbers
-    pointsDisplay.textContent = Math.floor(points).toLocaleString();
+    const formattedPoints = formatNumberShort(points);
+    pointsDisplay.textContent = formattedPoints.value;
+    pointsSuffixDisplay.textContent = formattedPoints.suffixWord || '\u00A0'; // Use nbsp if suffix is empty
+
     // Update prestige display to show current bonus
     const prestigeBonusPercent = (prestigePoints * PRESTIGE_BONUS_RATE * 100).toFixed(1);
     prestigePointsDisplay.textContent = `Prestige Points: ${prestigePoints.toLocaleString()} (+${prestigeBonusPercent}% Bonus)`;
     
     // Update accumulated points display
     if (accumulatedPointsDisplay) {
-        accumulatedPointsDisplay.textContent = `(Total Earned: ${Math.floor(totalPointsAccumulated).toLocaleString()})`;
+        const formattedAccumulated = formatNumberShort(totalPointsAccumulated);
+        accumulatedPointsDisplay.textContent = formattedAccumulated.value;
+        accumulatedPointsSuffixDisplay.textContent = formattedAccumulated.suffixWord || '\u00A0';
     }
     
     updatePrestigeDisplay(); // Check if prestige button should be shown
@@ -63,7 +69,9 @@ function updateDisplay() {
 // Function to update the prestige button visibility
 function updatePrestigeDisplay() {
     prestigeButton.classList.toggle('hidden', !canPrestige());
-    prestigeButton.textContent = `Prestige (${PRESTIGE_REQUIREMENT.toLocaleString()} points)`;
+    const formattedRequirement = formatNumberShort(PRESTIGE_REQUIREMENT);
+    // Combine value and suffix for the button text
+    prestigeButton.textContent = `Prestige (${formattedRequirement.value}${formattedRequirement.suffixWord ? ' ' + formattedRequirement.suffixWord : ''} points)`;
 }
 
 // --- Clicking Mechanics ---
@@ -143,11 +151,12 @@ function renderStore() {
         const upgradeElement = document.createElement('div');
         upgradeElement.dataset.upgradeId = upgrade.id;
         upgradeElement.className = 'border p-3 rounded bg-white shadow-sm flex justify-between items-center';
+        const formattedCost = formatNumberShort(upgrade.cost);
         upgradeElement.innerHTML = `
             <div>
                 <h4 class="font-semibold">${upgrade.name} (Level ${upgrade.purchased})</h4>
                 <p class="text-sm text-gray-600">${upgrade.description}</p>
-                <p class="text-sm text-gray-800 font-medium">Cost: ${Math.floor(upgrade.cost).toLocaleString()}</p>
+                <p class="text-sm text-gray-800 font-medium">Cost: ${formattedCost.value}${formattedCost.suffixWord ? ' ' + formattedCost.suffixWord : ''}</p>
             </div>
             <button data-id="${upgrade.id}" class="buy-upgrade-btn bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed">
                 Buy
@@ -228,7 +237,8 @@ function purchaseUpgrade(upgradeId) {
             // Update the cost display
             const costElement = storeElement.querySelector('p.text-gray-800'); // Find the cost paragraph
             if (costElement) {
-                costElement.textContent = `Cost: ${Math.floor(upgrade.cost).toLocaleString()}`;
+                 const formattedCost = formatNumberShort(upgrade.cost);
+                 costElement.textContent = `Cost: ${formattedCost.value}${formattedCost.suffixWord ? ' ' + formattedCost.suffixWord : ''}`; // Combine value and suffix
             }
         } else {
             console.warn('Could not find store element to update for ID:', upgrade.id);
@@ -498,6 +508,30 @@ prestigeButton.addEventListener('click', performPrestige);
 
 
 // --- Helper Functions ---
+
+// Function to format large numbers into a value and a word suffix (e.g., { value: "1.23", suffixWord: "Million" })
+function formatNumberShort(number) {
+    number = Math.floor(number);
+
+    const suffixes = [
+        // Add more if needed (e.g., Sextillion, Septillion)
+        { value: 1e18, word: "Quintillion" },
+        { value: 1e15, word: "Quadrillion" },
+        { value: 1e12, word: "Trillion" },
+        { value: 1e9,  word: "Billion" },
+        { value: 1e6,  word: "Million" }
+    ];
+
+    for (let i = 0; i < suffixes.length; i++) {
+        if (number >= suffixes[i].value) {
+            const shortValue = (number / suffixes[i].value).toFixed(2);
+            return { value: shortValue, suffixWord: suffixes[i].word };
+        }
+    }
+
+    // If below 1 million, return standard formatting and empty suffix word
+    return { value: number.toLocaleString(), suffixWord: "" };
+}
 
 // Reset game function (useful for errors or explicit reset)
 function resetGame() {

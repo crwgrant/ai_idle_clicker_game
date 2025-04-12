@@ -12,7 +12,10 @@
         <!-- Left Column - Clicker Interface -->
         <div class="p-4 border-r border-gray-300 flex flex-col items-center justify-center">
             <h2 class="text-2xl font-bold mb-4">Total Points</h2>
-            <div id="points-display" class="text-4xl mb-4 font-mono">0</div>
+            <div class="flex flex-col items-center mb-4">
+                <div id="points-display" class="text-4xl font-mono">0</div>
+                <span id="points-suffix" class="text-lg font-medium text-gray-700 h-6">&nbsp;</span>
+            </div>
             <button id="click-button" class="w-32 h-32 rounded-full bg-blue-500 text-white font-bold text-lg shadow-md hover:bg-blue-600 active:translate-y-1 active:scale-95 transition-all duration-75 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75">
                 Click Me!
             </button>
@@ -35,7 +38,10 @@
         <div class="relative"> <!-- Outer container for positioning context -->
             <div class="absolute inset-0 pt-4 pr-4 pb-0.5 pl-4 flex flex-col"> <!-- Changed p-4 to pt-4 pr-4 pb-2 pl-4 -->
                 <h2 class="text-2xl font-bold mb-4 flex-shrink-0">Store 
-                    <span id="accumulated-points-display" class="text-sm font-normal text-gray-600">(Total Earned: 0)</span> <!-- Added span for accumulated points -->
+                    <span class="text-sm font-normal text-gray-600 flex flex-col items-start"> <!-- Wrapper for accumulated -->
+                        <span>(Total Earned: <span id="accumulated-points-display">0</span>)</span>
+                        <span id="accumulated-points-suffix" class="h-4">&nbsp;</span> <!-- Suffix display -->
+                    </span> 
                 </h2>
                 <div id="upgrade-store" class="space-y-2 overflow-y-auto flex-grow min-h-0"> <!-- Scrollable content -->
                     <!-- Upgrade store items will be dynamically inserted here -->
