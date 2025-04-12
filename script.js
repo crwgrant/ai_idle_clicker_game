@@ -5,6 +5,7 @@ let autoPointsPerSecond = 0;
 let prestigePoints = 0;
 let lastActiveTime = Date.now();
 const PRESTIGE_REQUIREMENT = 1000000;
+const PRESTIGE_BONUS_RATE = 0.01; // 1% bonus per prestige point
 
 // DOM Element References
 const pointsDisplay = document.getElementById('points-display');
@@ -27,6 +28,8 @@ const initialUpgrades = [
     { id: 5, name: "Optimization Algorithm Mk1", cost: 10000, baseCost: 10000, multiplier: 0.05, type: "auto_percent", purchased: 0, description: "Increases total points per second by 5%." },
     { id: 6, name: "Ergonomic Mouse Mk1",      cost: 20000, baseCost: 20000, multiplier: 0.05, type: "click_percent", purchased: 0, description: "Increases total points per click by 5%." },
     { id: 7, name: "Quantum Computing Cloud",   cost: 500000,baseCost: 500000,multiplier: 0.10, type: "auto_percent", purchased: 0, description: "Increases total points per second by 10%." },
+    // Add higher tier example
+    { id: 8, name: "Optimization Algorithm Mk2", cost: 500000, baseCost: 500000, multiplier: 0.07, type: "auto_percent", purchased: 0, description: "Increases total points per second by 7%." },
     // Add more upgrades as needed following the PRD's progression ideas
 ];
 
@@ -40,7 +43,9 @@ let upgrades = JSON.parse(JSON.stringify(initialUpgrades));
 function updateDisplay() {
     // Use Intl.NumberFormat for better readability of large numbers
     pointsDisplay.textContent = Math.floor(points).toLocaleString();
-    prestigePointsDisplay.textContent = `Prestige Points: ${prestigePoints.toLocaleString()}`;
+    // Update prestige display to show current bonus
+    const prestigeBonusPercent = (prestigePoints * PRESTIGE_BONUS_RATE * 100).toFixed(1);
+    prestigePointsDisplay.textContent = `Prestige Points: ${prestigePoints.toLocaleString()} (+${prestigeBonusPercent}% Bonus)`;
     updatePrestigeDisplay(); // Check if prestige button should be shown
     updateStoreAvailability(); // Grey out unaffordable upgrades
 }
@@ -195,8 +200,14 @@ function calculateTotalAutoPPS() {
         .filter(u => u.type === 'auto_percent' && u.purchased > 0)
         .reduce((multiplier, u) => multiplier * (1 + (u.multiplier * u.purchased)), 1); // Start multiplier at 1
 
-    // Apply percentage multiplier to the base PPS
-    return basePPS * percentMultiplier;
+    // Calculate PPS after upgrade multipliers
+    let calculatedPPS = basePPS * percentMultiplier;
+
+    // Apply Prestige Bonus
+    const prestigeMultiplier = 1 + (prestigePoints * PRESTIGE_BONUS_RATE);
+    calculatedPPS *= prestigeMultiplier;
+
+    return calculatedPPS;
 }
 
 // Helper function to calculate total Click Multiplier from all purchased upgrades
@@ -211,9 +222,15 @@ function calculateTotalClickMultiplier() {
         .filter(u => u.type === 'click_percent' && u.purchased > 0)
         .reduce((multiplier, u) => multiplier * (1 + (u.multiplier * u.purchased)), 1); // Start multiplier at 1
 
-    // Apply percentage multiplier to the base click bonus
+    // Calculate click bonus after upgrade multipliers
+    let calculatedClickBonus = baseClickBonus * percentMultiplier;
+
+    // Apply Prestige Bonus
+    const prestigeMultiplier = 1 + (prestigePoints * PRESTIGE_BONUS_RATE);
+    calculatedClickBonus *= prestigeMultiplier;
+
     // Note: The actual points per click is (1 + calculatedClickMultiplier)
-    return baseClickBonus * percentMultiplier;
+    return calculatedClickBonus;
 }
 
 
