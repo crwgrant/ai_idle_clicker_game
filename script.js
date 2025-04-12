@@ -16,6 +16,7 @@ const activeUpgradesContainer = document.getElementById('active-upgrades');
 const prestigeButton = document.getElementById('prestige-btn');
 const saveButton = document.getElementById('save-btn');
 const saveStatusElement = document.getElementById('save-status'); // Added save status element reference
+const resetLink = document.getElementById('reset-link'); // Added reset link reference
 
 // Initial Upgrade Data (based on PRD, costs might need balancing later)
 // We'll make a deep copy later when loading/resetting to avoid mutation issues.
@@ -451,9 +452,29 @@ function resetGame() {
     renderStore();
     renderActiveUpgrades();
     localStorage.removeItem('idleClickerSave'); // Clear save data on reset
+    console.log("Game Reset and Save Cleared.");
+    // Optionally display a reset confirmation message briefly
+    if (saveStatusElement) {
+        saveStatusElement.textContent = "Game Reset!";
+        if (saveStatusTimeoutId) clearTimeout(saveStatusTimeoutId);
+        saveStatusTimeoutId = setTimeout(() => {
+             if (saveStatusElement) saveStatusElement.textContent = '\u00A0';
+             saveStatusTimeoutId = null;
+         }, 2500);
+    }
 }
 
 // Final initial UI updates after all functions are defined
 updateDisplay();
 renderStore();
-renderActiveUpgrades(); 
+renderActiveUpgrades();
+
+// Reset link listener
+if (resetLink) {
+    resetLink.addEventListener('click', (event) => {
+        event.preventDefault(); // Prevent navigating to #
+        if (confirm("Are you sure you want to reset all your progress? This cannot be undone.")) {
+            resetGame();
+        }
+    });
+} 
