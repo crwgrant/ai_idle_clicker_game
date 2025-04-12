@@ -36,13 +36,18 @@
         </div>
         <!-- Right Column - Purchasable Upgrades -->
         <div class="relative"> <!-- Outer container for positioning context -->
-            <div class="absolute inset-0 pt-4 pr-4 pb-0.5 pl-4 flex flex-col"> <!-- Changed p-4 to pt-4 pr-4 pb-2 pl-4 -->
-                <h2 class="text-2xl font-bold mb-4 flex-shrink-0">Store 
-                    <span class="text-sm font-normal text-gray-600 flex flex-col items-start"> <!-- Wrapper for accumulated -->
-                        <span>(Total Earned: <span id="accumulated-points-display">0</span>)</span>
-                        <span id="accumulated-points-suffix" class="h-4">&nbsp;</span> <!-- Suffix display -->
-                    </span> 
-                </h2>
+            <div class="absolute inset-0 pt-4 pr-4 pb-0.5 pl-4 flex flex-col"> 
+                <div class="flex justify-between items-baseline mb-2 flex-shrink-0"> <!-- Wrapper for Title and Bulk Controls -->
+                    <h2 class="text-2xl font-bold">Store 
+                        <span id="accumulated-points-display" class="text-sm font-normal text-gray-600 flex flex-col items-start">(Total Earned: 0)</span>
+                        <span id="accumulated-points-suffix" class="h-4">&nbsp;</span> 
+                    </h2>
+                    <div id="bulk-buy-controls" class="hidden space-x-1"> <!-- Bulk Buy Buttons Container -->
+                        <button id="buy-x1" class="bulk-buy-btn text-xs px-2 py-0.5 rounded border bg-blue-200 border-blue-400">x1</button>
+                        <button id="buy-x10" class="bulk-buy-btn text-xs px-2 py-0.5 rounded border border-gray-400">x10</button>
+                        <button id="buy-x100" class="bulk-buy-btn text-xs px-2 py-0.5 rounded border border-gray-400">x100</button>
+                    </div>
+                </div>
                 <div id="upgrade-store" class="space-y-2 overflow-y-auto flex-grow min-h-0"> <!-- Scrollable content -->
                     <!-- Upgrade store items will be dynamically inserted here -->
                 </div>

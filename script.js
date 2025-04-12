@@ -5,6 +5,7 @@ let autoPointsPerSecond = 0;
 let prestigePoints = 0;
 let lastActiveTime = Date.now();
 let totalPointsAccumulated = 0; // New variable to track total earned points in this run
+let bulkBuyAmount = 1; // New state for bulk buying
 const PRESTIGE_REQUIREMENT = 1000000;
 const PRESTIGE_BONUS_RATE = 0.01; // 1% bonus per prestige point
 
@@ -21,6 +22,10 @@ const resetLink = document.getElementById('reset-link'); // Added reset link ref
 const accumulatedPointsDisplay = document.getElementById('accumulated-points-display'); // Added accumulated points display reference
 const pointsSuffixDisplay = document.getElementById('points-suffix'); // New suffix element
 const accumulatedPointsSuffixDisplay = document.getElementById('accumulated-points-suffix'); // New suffix element
+const bulkBuyControls = document.getElementById('bulk-buy-controls');
+const buyX1Button = document.getElementById('buy-x1');
+const buyX10Button = document.getElementById('buy-x10');
+const buyX100Button = document.getElementById('buy-x100');
 
 // Initial Upgrade Data (based on PRD, costs might need balancing later)
 // We'll make a deep copy later when loading/resetting to avoid mutation issues.
@@ -61,6 +66,12 @@ function updateDisplay() {
         accumulatedPointsSuffixDisplay.textContent = formattedAccumulated.suffixWord || '\u00A0';
     }
     
+    // Show/hide bulk buy controls
+    const bulkBuyThreshold = 50000;
+    if (bulkBuyControls) {
+        bulkBuyControls.classList.toggle('hidden', totalPointsAccumulated < bulkBuyThreshold);
+    }
+
     updatePrestigeDisplay(); // Check if prestige button should be shown
     updateStoreAvailability(); // Grey out unaffordable upgrades
     updateStoreVisibility(); // Add call to update visibility
@@ -210,52 +221,71 @@ function purchaseUpgrade(upgradeId) {
         return;
     }
 
-    if (points >= upgrade.cost) {
-        points -= upgrade.cost;
-        upgrade.purchased += 1;
+    let levelsPurchased = 0;
+    let totalCost = 0;
+    const initialPoints = points; // Store starting points for logging
 
-        // Increase cost for the next purchase (e.g., 15% increase)
-        const oldCost = upgrade.cost; // Store old cost for comparison if needed
-        upgrade.cost = Math.floor(upgrade.baseCost * Math.pow(1.15, upgrade.purchased));
+    // Loop up to the selected bulk buy amount
+    for (let i = 0; i < bulkBuyAmount; i++) {
+        // Check if we can afford the CURRENT level
+        if (points >= upgrade.cost) {
+            totalCost += upgrade.cost; // Track total cost for this bulk purchase
+            points -= upgrade.cost;
+            upgrade.purchased += 1;
+            levelsPurchased++;
 
-        // Recalculate BOTH multipliers after any purchase, as percentages affect totals
+            // Increase cost for the next potential purchase in the loop
+            upgrade.cost = Math.floor(upgrade.baseCost * Math.pow(1.15, upgrade.purchased));
+
+            // If we can't afford the *next* level, break the loop early
+            if (points < upgrade.cost && i < bulkBuyAmount - 1) {
+                break;
+            }
+        } else {
+            // Cannot afford even the current level, break immediately
+            if (i === 0) { // Only log if we couldn't buy even one
+                 console.log("Not enough points to buy", upgrade.name);
+            }
+            break;
+        }
+    }
+
+    // --- Update logic after the loop completes --- 
+    if (levelsPurchased > 0) {
+        // Recalculate multipliers only ONCE after all levels are bought
         autoPointsPerSecond = calculateTotalAutoPPS();
         clickMultiplier = calculateTotalClickMultiplier();
 
-        console.log(`Purchased ${upgrade.name}. New cost: ${upgrade.cost}. Level: ${upgrade.purchased}`);
-        console.log(`New PPS: ${autoPointsPerSecond.toFixed(2)}, New Click Bonus: ${clickMultiplier.toFixed(2)}`); // Log new rates
+        console.log(`Bulk Purchased ${levelsPurchased} levels of ${upgrade.name}. New Level: ${upgrade.purchased}. New Cost: ${formatNumberShort(upgrade.cost).value}. Total Cost: ${formatNumberShort(totalCost).value}.`);
+        console.log(`New PPS: ${autoPointsPerSecond.toFixed(2)}, New Click Bonus: ${clickMultiplier.toFixed(2)}`);
 
         // --- Update UI without full re-render ---
-        // Find the specific element in the store
         const storeElement = upgradeStoreContainer.querySelector(`[data-upgrade-id="${upgrade.id}"]`);
         if (storeElement) {
-            // Update the level display in the heading
             const headingElement = storeElement.querySelector('h4');
             if (headingElement) {
                 headingElement.textContent = `${upgrade.name} (Level ${upgrade.purchased})`;
             }
-            // Update the cost display
-            const costElement = storeElement.querySelector('p.text-gray-800'); // Find the cost paragraph
+            const costElement = storeElement.querySelector('p.text-gray-800');
             if (costElement) {
-                 const formattedCost = formatNumberShort(upgrade.cost);
-                 costElement.textContent = `Cost: ${formattedCost.value}${formattedCost.suffixWord ? ' ' + formattedCost.suffixWord : ''}`; // Combine value and suffix
+                const formattedCost = formatNumberShort(upgrade.cost);
+                costElement.textContent = `Cost: ${formattedCost.value}${formattedCost.suffixWord ? ' ' + formattedCost.suffixWord : ''}`;
             }
         } else {
             console.warn('Could not find store element to update for ID:', upgrade.id);
-             // Fallback to re-rendering if specific element update fails?
-            renderStore(); 
+            renderStore(); // Fallback if needed
         }
 
         // Update the middle panel (Active Upgrades)
-        renderActiveUpgrades(); 
+        renderActiveUpgrades();
         // Update points, button states, and store visibility
-        updateDisplay(); 
-
-        // --- End UI Update --- 
+        updateDisplay();
 
     } else {
-        console.log("Not enough points to buy", upgrade.name);
-        // Optionally provide visual feedback (e.g., shake the button)
+         // If no levels were purchased (because we couldn't afford the first one),
+         // we might still need to update the display if points changed elsewhere?
+         // However, the standard update loop should handle this.
+         // We already logged the "Not enough points" message inside the loop.
     }
 }
 
@@ -582,4 +612,29 @@ if (resetLink) {
             resetGame();
         }
     });
-} 
+}
+
+// --- Event Listeners Setup ---
+
+// Function to handle updating bulk buy selection and button styles
+function updateBulkBuySelection(selectedAmount) {
+    bulkBuyAmount = selectedAmount;
+    const buttons = [buyX1Button, buyX10Button, buyX100Button];
+    buttons.forEach(button => {
+        if (button) {
+            const amount = parseInt(button.textContent.replace('x', ''));
+            if (amount === selectedAmount) {
+                button.classList.remove('bg-white', 'border-gray-400');
+                button.classList.add('bg-blue-200', 'border-blue-400');
+            } else {
+                button.classList.remove('bg-blue-200', 'border-blue-400');
+                button.classList.add('bg-white', 'border-gray-400');
+            }
+        }
+    });
+}
+
+// Add event listeners for bulk buy buttons
+if (buyX1Button) buyX1Button.addEventListener('click', () => updateBulkBuySelection(1));
+if (buyX10Button) buyX10Button.addEventListener('click', () => updateBulkBuySelection(10));
+if (buyX100Button) buyX100Button.addEventListener('click', () => updateBulkBuySelection(100)); 
