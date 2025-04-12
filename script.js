@@ -19,9 +19,11 @@ const prestigeButton = document.getElementById('prestige-btn');
 const saveButton = document.getElementById('save-btn');
 const saveStatusElement = document.getElementById('save-status'); // Added save status element reference
 const resetLink = document.getElementById('reset-link'); // Added reset link reference
-const accumulatedPointsDisplay = document.getElementById('accumulated-points-display'); // Added accumulated points display reference
+const accumulatedPointsDisplay = document.getElementById('accumulated-points-display'); // DEPRECATED - keeping temporarily for safety but will be removed
+const accumulatedPointsValue = document.getElementById('accumulated-points-value'); // NEW value display
+const accumulatedPointsSuffix = document.getElementById('accumulated-points-suffix'); // NEW suffix display
 const pointsSuffixDisplay = document.getElementById('points-suffix'); // New suffix element
-const accumulatedPointsSuffixDisplay = document.getElementById('accumulated-points-suffix'); // New suffix element
+const accumulatedPointsSuffixDisplay = document.getElementById('accumulated-points-suffix'); // DEPRECATED - will be removed
 const bulkBuyControls = document.getElementById('bulk-buy-controls');
 const buyX1Button = document.getElementById('buy-x1');
 const buyX10Button = document.getElementById('buy-x10');
@@ -59,11 +61,11 @@ function updateDisplay() {
     const prestigeBonusPercent = (prestigePoints * PRESTIGE_BONUS_RATE * 100).toFixed(1);
     prestigePointsDisplay.textContent = `Prestige Points: ${prestigePoints.toLocaleString()} (+${prestigeBonusPercent}% Bonus)`;
     
-    // Update accumulated points display
-    if (accumulatedPointsDisplay) {
+    // Update accumulated points display using the new elements
+    if (accumulatedPointsValue && accumulatedPointsSuffix) { // Check for the new elements
         const formattedAccumulated = formatNumberShort(totalPointsAccumulated);
-        accumulatedPointsDisplay.textContent = formattedAccumulated.value;
-        accumulatedPointsSuffixDisplay.textContent = formattedAccumulated.suffixWord || '\u00A0';
+        accumulatedPointsValue.textContent = formattedAccumulated.value;
+        accumulatedPointsSuffix.textContent = formattedAccumulated.suffixWord || '\u00A0'; // Update the new suffix element
     }
     
     // Show/hide bulk buy controls

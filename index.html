@@ -16,6 +16,13 @@
                 <div id="points-display" class="text-4xl font-mono">0</div>
                 <span id="points-suffix" class="text-lg font-medium text-gray-700 h-6">&nbsp;</span>
             </div>
+            <div class="flex flex-col items-center mb-6">
+                <span class="text-sm font-semibold text-gray-700">Total Earned:</span>
+                <div>
+                    <span id="accumulated-points-value" class="text-xl font-mono">0</span>
+                    <span id="accumulated-points-suffix" class="text-sm font-medium text-gray-600 ml-1"></span>
+                </div>
+            </div>
             <button id="click-button" class="w-32 h-32 rounded-full bg-blue-500 text-white font-bold text-lg shadow-md hover:bg-blue-600 active:translate-y-1 active:scale-95 transition-all duration-75 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75">
                 Click Me!
             </button>
@@ -38,10 +45,7 @@
         <div class="relative"> <!-- Outer container for positioning context -->
             <div class="absolute inset-0 pt-4 pr-4 pb-0.5 pl-4 flex flex-col"> 
                 <div class="flex justify-between items-baseline mb-2 flex-shrink-0"> <!-- Wrapper for Title and Bulk Controls -->
-                    <h2 class="text-2xl font-bold">Store 
-                        <span id="accumulated-points-display" class="text-sm font-normal text-gray-600 flex flex-col items-start">(Total Earned: 0)</span>
-                        <span id="accumulated-points-suffix" class="h-4">&nbsp;</span> 
-                    </h2>
+                    <h2 class="text-2xl font-bold">Store</h2>
                     <div id="bulk-buy-controls" class="hidden space-x-1"> <!-- Bulk Buy Buttons Container -->
                         <button id="buy-x1" class="bulk-buy-btn text-xs px-2 py-0.5 rounded border bg-blue-200 border-blue-400">x1</button>
                         <button id="buy-x10" class="bulk-buy-btn text-xs px-2 py-0.5 rounded border border-gray-400">x10</button>
