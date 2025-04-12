@@ -23,6 +23,10 @@ const initialUpgrades = [
     { id: 2, name: "Power Click Mk1",   cost: 100,  baseCost: 100,  multiplier: 1,   type: "click", purchased: 0, description: "Adds 1 point to each click." },
     { id: 3, name: "Auto-Clicker Mk2", cost: 500,  baseCost: 500,  multiplier: 1,   type: "auto", purchased: 0, description: "Generates 1 point per second." },
     { id: 4, name: "Power Click Mk2",   cost: 1000, baseCost: 1000, multiplier: 5,   type: "click", purchased: 0, description: "Adds 5 points to each click." },
+    // Added Mid/Late Game Upgrades
+    { id: 5, name: "Optimization Algorithm Mk1", cost: 10000, baseCost: 10000, multiplier: 0.05, type: "auto_percent", purchased: 0, description: "Increases total points per second by 5%." },
+    { id: 6, name: "Ergonomic Mouse Mk1",      cost: 20000, baseCost: 20000, multiplier: 0.05, type: "click_percent", purchased: 0, description: "Increases total points per click by 5%." },
+    { id: 7, name: "Quantum Computing Cloud",   cost: 500000,baseCost: 500000,multiplier: 0.10, type: "auto_percent", purchased: 0, description: "Increases total points per second by 10%." },
     // Add more upgrades as needed following the PRD's progression ideas
 ];
 
@@ -148,7 +152,7 @@ function updateStoreAvailability() {
 }
 
 
-// Function to handle purchasing an upgrade (placeholder based on PRD)
+// Function to handle purchasing an upgrade
 function purchaseUpgrade(upgradeId) {
     const upgrade = upgrades.find(u => u.id === upgradeId);
     if (!upgrade) {
@@ -163,16 +167,12 @@ function purchaseUpgrade(upgradeId) {
         // Increase cost for the next purchase (e.g., 15% increase)
         upgrade.cost = Math.floor(upgrade.baseCost * Math.pow(1.15, upgrade.purchased));
 
-        // Apply the upgrade effect
-        if (upgrade.type === "auto") {
-            // Recalculate total auto points per second
-            autoPointsPerSecond = calculateTotalAutoPPS();
-        } else if (upgrade.type === "click") {
-            // Recalculate total click multiplier
-            clickMultiplier = calculateTotalClickMultiplier();
-        }
+        // Recalculate BOTH multipliers after any purchase, as percentages affect totals
+        autoPointsPerSecond = calculateTotalAutoPPS();
+        clickMultiplier = calculateTotalClickMultiplier();
 
         console.log(`Purchased ${upgrade.name}. New cost: ${upgrade.cost}. Level: ${upgrade.purchased}`);
+        console.log(`New PPS: ${autoPointsPerSecond.toFixed(2)}, New Click Bonus: ${clickMultiplier.toFixed(2)}`); // Log new rates
 
         updateDisplay();
         renderStore(); // Re-render store to show new costs and levels
@@ -183,18 +183,37 @@ function purchaseUpgrade(upgradeId) {
     }
 }
 
-// Helper function to calculate total Auto PPS from all purchased 'auto' upgrades
+// Helper function to calculate total Auto PPS from all purchased upgrades
 function calculateTotalAutoPPS() {
-    return upgrades
+    // Calculate base PPS from flat upgrades
+    const basePPS = upgrades
         .filter(u => u.type === 'auto' && u.purchased > 0)
         .reduce((total, u) => total + (u.multiplier * u.purchased), 0);
+
+    // Calculate total percentage multiplier from relevant upgrades
+    const percentMultiplier = upgrades
+        .filter(u => u.type === 'auto_percent' && u.purchased > 0)
+        .reduce((multiplier, u) => multiplier * (1 + (u.multiplier * u.purchased)), 1); // Start multiplier at 1
+
+    // Apply percentage multiplier to the base PPS
+    return basePPS * percentMultiplier;
 }
 
-// Helper function to calculate total Click Multiplier from all purchased 'click' upgrades
+// Helper function to calculate total Click Multiplier from all purchased upgrades
 function calculateTotalClickMultiplier() {
-    return upgrades
+    // Calculate base click bonus from flat upgrades
+    const baseClickBonus = upgrades
         .filter(u => u.type === 'click' && u.purchased > 0)
         .reduce((total, u) => total + (u.multiplier * u.purchased), 0);
+
+    // Calculate total percentage multiplier from relevant upgrades
+    const percentMultiplier = upgrades
+        .filter(u => u.type === 'click_percent' && u.purchased > 0)
+        .reduce((multiplier, u) => multiplier * (1 + (u.multiplier * u.purchased)), 1); // Start multiplier at 1
+
+    // Apply percentage multiplier to the base click bonus
+    // Note: The actual points per click is (1 + calculatedClickMultiplier)
+    return baseClickBonus * percentMultiplier;
 }
 
 
@@ -212,11 +231,30 @@ function renderActiveUpgrades() {
         const elem = document.createElement('div');
         elem.className = 'border-b pb-1 mb-1';
         let effect = '';
-        if (upgrade.type === 'auto') {
-            effect = `+${(upgrade.multiplier * upgrade.purchased).toLocaleString()} points/sec`;
-        } else {
-            effect = `+${(upgrade.multiplier * upgrade.purchased).toLocaleString()} points/click`;
+        // Format effect string based on upgrade type
+        switch (upgrade.type) {
+            case 'auto':
+                effect = `+${(upgrade.multiplier * upgrade.purchased).toLocaleString(undefined, {maximumFractionDigits: 1})} points/sec (flat)`;
+                break;
+            case 'click':
+                effect = `+${(upgrade.multiplier * upgrade.purchased).toLocaleString()} points/click (flat)`;
+                break;
+            case 'auto_percent':
+                // Calculate the total percentage bonus from this specific upgrade line
+                const totalAutoPercentBonus = (Math.pow(1 + upgrade.multiplier, upgrade.purchased) - 1) * 100;
+                // effect = `+${(upgrade.multiplier * upgrade.purchased * 100).toFixed(1)}% PPS`; // Simpler, less accurate for stacking levels
+                 effect = `+${totalAutoPercentBonus.toFixed(1)}% total PPS`;
+                break;
+            case 'click_percent':
+                 // Calculate the total percentage bonus from this specific upgrade line
+                const totalClickPercentBonus = (Math.pow(1 + upgrade.multiplier, upgrade.purchased) - 1) * 100;
+                // effect = `+${(upgrade.multiplier * upgrade.purchased * 100).toFixed(1)}% PPC`; // Simpler, less accurate for stacking levels
+                effect = `+${totalClickPercentBonus.toFixed(1)}% total Click Power`;
+                break;
+            default:
+                effect = 'Unknown effect';
         }
+
         elem.innerHTML = `<span class="font-medium">${upgrade.name} (Level ${upgrade.purchased})</span>: <span class="text-green-700">${effect}</span>`;
         activeUpgradesContainer.appendChild(elem);
     });
