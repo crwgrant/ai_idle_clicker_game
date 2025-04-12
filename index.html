@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Idle Clicker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="grid grid-cols-3 min-h-screen bg-gray-100">
+        <!-- Left Column - Clicker Interface -->
+        <div class="p-4 border-r border-gray-300 flex flex-col items-center justify-center">
+            <h2 class="text-2xl font-bold mb-4">Total Points</h2>
+            <div id="points-display" class="text-4xl mb-4 font-mono">0</div>
+            <button id="click-button" class="w-32 h-32 rounded-full bg-blue-500 text-white font-bold text-lg shadow-md hover:bg-blue-600 active:translate-y-1 active:scale-95 transition-all duration-75 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75">
+                Click Me!
+            </button>
+            <div id="prestige-points-display" class="mt-4 text-purple-700 font-semibold">Prestige Points: 0</div>
+            <div class="mt-4">
+                <button id="save-btn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded shadow focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-opacity-75">Save Game</button>
+            </div>
+        </div>
+        <!-- Middle Column - Current Upgrades -->
+        <div class="p-4 border-r border-gray-300">
+            <h2 class="text-2xl font-bold mb-4">Active Upgrades</h2>
+            <div id="active-upgrades" class="space-y-2">
+                <!-- Active upgrades will be dynamically inserted here -->
+                 <p class="text-gray-500">No upgrades purchased yet.</p>
+            </div>
+        </div>
+        <!-- Right Column - Purchasable Upgrades -->
+        <div class="p-4">
+            <h2 class="text-2xl font-bold mb-4">Store</h2>
+            <div id="upgrade-store" class="space-y-2">
+                <!-- Upgrade store items will be dynamically inserted here -->
+            </div>
+            <div class="mt-8">
+                <button id="prestige-btn" class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded shadow hidden focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-opacity-75">
+                    Prestige (Requires 1M points)
+                </button>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html> 
