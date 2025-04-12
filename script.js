@@ -162,12 +162,17 @@ function renderStore() {
         const upgradeElement = document.createElement('div');
         upgradeElement.dataset.upgradeId = upgrade.id;
         upgradeElement.className = 'border p-3 rounded bg-white shadow-sm flex justify-between items-center';
-        const formattedCost = formatNumberShort(upgrade.cost);
+        
+        // Calculate and display cost based on bulk amount
+        const costLabel = bulkBuyAmount > 1 ? `Cost (x${bulkBuyAmount})` : "Cost";
+        const displayCost = bulkBuyAmount > 1 ? calculateBulkCost(upgrade.id, bulkBuyAmount) : upgrade.cost;
+        const formattedCost = formatNumberShort(displayCost);
+        
         upgradeElement.innerHTML = `
             <div>
                 <h4 class="font-semibold">${upgrade.name} (Level ${upgrade.purchased})</h4>
                 <p class="text-sm text-gray-600">${upgrade.description}</p>
-                <p class="text-sm text-gray-800 font-medium">Cost: ${formattedCost.value}${formattedCost.suffixWord ? ' ' + formattedCost.suffixWord : ''}</p>
+                <p class="cost-display text-sm text-gray-800 font-medium">${costLabel}: ${formattedCost.value}${formattedCost.suffixWord ? ' ' + formattedCost.suffixWord : ''}</p>
             </div>
             <button data-id="${upgrade.id}" class="buy-upgrade-btn bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed">
                 Buy
@@ -188,7 +193,13 @@ function updateStoreAvailability() {
     document.querySelectorAll('.buy-upgrade-btn').forEach(button => {
         const upgradeId = parseInt(button.dataset.id);
         const upgrade = upgrades.find(u => u.id === upgradeId);
-        button.disabled = points < upgrade.cost;
+        if (!upgrade) return; // Skip if upgrade data not found
+
+        // Calculate the cost based on the current bulk buy amount
+        const costToCheck = bulkBuyAmount > 1 ? calculateBulkCost(upgrade.id, bulkBuyAmount) : upgrade.cost;
+        
+        // Disable button if current points are less than the calculated cost
+        button.disabled = points < costToCheck;
     });
 }
 
@@ -222,14 +233,14 @@ function purchaseUpgrade(upgradeId) {
     }
 
     let levelsPurchased = 0;
-    let totalCost = 0;
+    let totalActualCost = 0; // Rename totalCost to avoid confusion
     const initialPoints = points; // Store starting points for logging
 
     // Loop up to the selected bulk buy amount
     for (let i = 0; i < bulkBuyAmount; i++) {
         // Check if we can afford the CURRENT level
         if (points >= upgrade.cost) {
-            totalCost += upgrade.cost; // Track total cost for this bulk purchase
+            totalActualCost += upgrade.cost; // Track total cost for this bulk purchase
             points -= upgrade.cost;
             upgrade.purchased += 1;
             levelsPurchased++;
@@ -256,7 +267,7 @@ function purchaseUpgrade(upgradeId) {
         autoPointsPerSecond = calculateTotalAutoPPS();
         clickMultiplier = calculateTotalClickMultiplier();
 
-        console.log(`Bulk Purchased ${levelsPurchased} levels of ${upgrade.name}. New Level: ${upgrade.purchased}. New Cost: ${formatNumberShort(upgrade.cost).value}. Total Cost: ${formatNumberShort(totalCost).value}.`);
+        console.log(`Bulk Purchased ${levelsPurchased} levels of ${upgrade.name}. New Level: ${upgrade.purchased}. New Cost: ${formatNumberShort(upgrade.cost).value}. Total Cost: ${formatNumberShort(totalActualCost).value}.`);
         console.log(`New PPS: ${autoPointsPerSecond.toFixed(2)}, New Click Bonus: ${clickMultiplier.toFixed(2)}`);
 
         // --- Update UI without full re-render ---
@@ -266,10 +277,13 @@ function purchaseUpgrade(upgradeId) {
             if (headingElement) {
                 headingElement.textContent = `${upgrade.name} (Level ${upgrade.purchased})`;
             }
-            const costElement = storeElement.querySelector('p.text-gray-800');
+            // Update the cost display based on NEW bulk cost
+            const costElement = storeElement.querySelector('p.cost-display');
             if (costElement) {
-                const formattedCost = formatNumberShort(upgrade.cost);
-                costElement.textContent = `Cost: ${formattedCost.value}${formattedCost.suffixWord ? ' ' + formattedCost.suffixWord : ''}`;
+                const costLabel = bulkBuyAmount > 1 ? `Cost (x${bulkBuyAmount})` : "Cost";
+                const displayCost = bulkBuyAmount > 1 ? calculateBulkCost(upgrade.id, bulkBuyAmount) : upgrade.cost;
+                const formattedCost = formatNumberShort(displayCost);
+                costElement.textContent = `${costLabel}: ${formattedCost.value}${formattedCost.suffixWord ? ' ' + formattedCost.suffixWord : ''}`;
             }
         } else {
             console.warn('Could not find store element to update for ID:', upgrade.id);
@@ -287,6 +301,25 @@ function purchaseUpgrade(upgradeId) {
          // However, the standard update loop should handle this.
          // We already logged the "Not enough points" message inside the loop.
     }
+}
+
+// Helper function to calculate the total cost of buying a specific number of levels for an upgrade
+function calculateBulkCost(upgradeId, amount) {
+    const upgrade = upgrades.find(u => u.id === upgradeId);
+    if (!upgrade) return Infinity; // Return infinity if upgrade not found
+
+    let totalCost = 0;
+    let currentSimulatedCost = upgrade.cost; // Start with the cost of the current next level
+    let currentSimulatedLevel = upgrade.purchased;
+
+    for (let i = 0; i < amount; i++) {
+        totalCost += currentSimulatedCost;
+        currentSimulatedLevel++;
+        // Calculate the cost for the *next* simulated level
+        currentSimulatedCost = Math.floor(upgrade.baseCost * Math.pow(1.15, currentSimulatedLevel));
+    }
+
+    return totalCost;
 }
 
 // Helper function to calculate total Auto PPS from all purchased upgrades
@@ -618,6 +651,8 @@ if (resetLink) {
 
 // Function to handle updating bulk buy selection and button styles
 function updateBulkBuySelection(selectedAmount) {
+    if (bulkBuyAmount === selectedAmount) return; // No change
+
     bulkBuyAmount = selectedAmount;
     const buttons = [buyX1Button, buyX10Button, buyX100Button];
     buttons.forEach(button => {
@@ -632,6 +667,23 @@ function updateBulkBuySelection(selectedAmount) {
             }
         }
     });
+
+    // Update costs displayed in the store immediately
+    upgrades.forEach(upgrade => {
+        const storeElement = upgradeStoreContainer.querySelector(`[data-upgrade-id="${upgrade.id}"]`);
+        if (storeElement) {
+            const costElement = storeElement.querySelector('p.cost-display');
+            if (costElement) {
+                const costLabel = bulkBuyAmount > 1 ? `Cost (x${bulkBuyAmount})` : "Cost";
+                const displayCost = bulkBuyAmount > 1 ? calculateBulkCost(upgrade.id, bulkBuyAmount) : upgrade.cost;
+                const formattedCost = formatNumberShort(displayCost);
+                costElement.textContent = `${costLabel}: ${formattedCost.value}${formattedCost.suffixWord ? ' ' + formattedCost.suffixWord : ''}`;
+            }
+        }
+    });
+    
+    // Also update button availability based on new bulk cost
+    updateStoreAvailability(); 
 }
 
 // Add event listeners for bulk buy buttons
