@@ -6,7 +6,7 @@ This project is a simple idle clicker game built using HTML, Tailwind CSS, and v
 
 The game allows players to generate points by clicking a button. These points can then be spent on upgrades that either increase the points earned per click or automatically generate points over time (idle progression). The game features persistence using `localStorage`, allowing progress to be saved and automatically loaded when the game is revisited. A prestige system allows players to reset their progress for potential future bonuses after reaching a certain point threshold. A reset option is also available.
 
-**Live Demo:** [Idle Clicker Game](https://crwgrant.github.io/ai_idle_clicker_game/)
+**Live Demo:** [Idle Clicker Game](https://crwgrant.github.io/idle_clicker_game/)
 
 ## Core Features (from PRD.md)
 
